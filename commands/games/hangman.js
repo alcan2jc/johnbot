@@ -1,8 +1,5 @@
 const { Command } = require('discord.js-commando');
 const { MessageEmbed } = require('discord.js');
-// const wordsObj = require('D:\\Projects\\DiscordBots\\JohnBot\\johnbot\\scraper\\hmwords.json');
-// const config = require("D:\\Projects\\DiscordBots\\JohnBot\\johnbot\\data\\config.json");
-// const categories = require("D:\\Projects\\DiscordBots\\JohnBot\\johnbot\\scraper\\categories.json");
 const wordsObj = require("./hangmanData/hmwords.json");
 const config = require("D:\\Projects\\DiscordBots\\JohnBot\\johnbot\\data\\config.json");
 const categories = require("./hangmanData/categories.json");
@@ -33,6 +30,7 @@ module.exports = class Hangman extends Command {
 			memberName: 'hm',
 			description: `Starts a Hangman game. Type ${config.prefix}hm play to start playing`,
 			guildOnly: true,
+			//1 second cooldown for commands
 			throttling: {
 				usages: 1,
 				duration: 1,
@@ -56,7 +54,7 @@ module.exports = class Hangman extends Command {
 					}
 				}
 
-				//if no category was chosen, send the categories
+				//if no category was chosen, send the category list
 				if (state === stateEnum.IDLE) {
 					showCategories(msg);
 					break;
@@ -95,6 +93,7 @@ module.exports = class Hangman extends Command {
 						msg.reply("You have already joined");
 						setupMessage(msg);
 						break;
+					//add player to the game 
 					} else {
 						currentPlayers.push(msg.author);
 						msg.reply("Has been added to the game!!");
@@ -102,10 +101,10 @@ module.exports = class Hangman extends Command {
 						break;
 					}
 
-					//To start the game
+				//To start the game
 				} else if (args === "start") {
 
-					//Check if msger who started is in game
+					//Cant start the game if youre not in the game
 					if (!currentPlayers.includes(msg.author)) {
 						msg.reply("You haven't joined! join to start playing");
 						setupMessage(msg);
@@ -124,23 +123,25 @@ module.exports = class Hangman extends Command {
 			case stateEnum.GUESS:
 
 				//To stop playing
-				if (args === "GAME_STOP") {
+				if (args === "game_stop") {
 					msg.say("Game has been Stopped");
 					state = stateEnum.IDLE;
 					break;
 				}
 
+				//case needed during the start of the game so that "start" is not counted as an arg
 				if (!started) {
 					started = true;
 					break;
 				}
+
 				//At this point, don't do anything if its not msger's turn
 				if (msg.author !== currentPlayers[playerIndex]) {
 					break;
 				}
 
-				args = args.toLowerCase();
 				displayedWord = displayedWord.toLowerCase();
+				//Check if letter/word has already been guessed. 
 				if (goodGuesses.includes(args) || badGuesses.includes(args)) {
 					msg.reply("You already tried that. Try again!");
 					drawHangman(msg);
@@ -154,7 +155,6 @@ module.exports = class Hangman extends Command {
 						displayedWord = actualWord;
 						state = stateEnum.IDLE
 					}
-
 					//Wrong word guessed :(
 					else {
 						badGuesses.push(args);
@@ -186,11 +186,10 @@ module.exports = class Hangman extends Command {
 					else {
 						badGuesses.push(args);
 						msg.reply("Wrong letter guessed :(");
-
 					}
 				}
 
-				//win with all letters guessed!
+				//win!
 				if (displayedWord === actualWord) {
 					msg.say(`You Win!!!`);
 					drawHangman(msg);
@@ -218,6 +217,7 @@ module.exports = class Hangman extends Command {
 
 				drawHangman(msg);
 				break;
+
 			//Should never reach this point
 			default:
 				msg.say("goof");
@@ -309,6 +309,7 @@ function drawHangman(msg) {
 		msg.say(`It is your turn: ${currentPlayers[playerIndex]}`);
 	}
 
+	//Hangman drawing
 	let drawing = '```\n';
 	drawing += "  ________________\n" +
 		"  |              |\n";
@@ -350,6 +351,8 @@ function drawHangman(msg) {
 		`\nIncorrect Guesses: ${badGuesses}` + ' \n';
 
 	drawing += '```';
+
+	//send the embedded drawing and message.
 	msg.say(new MessageEmbed()
 		.setColor(0x00AE86)
 		.setTitle("Hangman")

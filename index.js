@@ -3,8 +3,6 @@ const config = require("D:\\Projects\\DiscordBots\\JohnBot\\johnbot\\data\\confi
 const commando = require('discord.js-commando');
 const { Guild } = require("discord.js");
 
-//const client = new Discord.Client();
-
 const client = new commando.Client();
 client.commandPrefix = '$';
 client.unknownCommandResponse = false;

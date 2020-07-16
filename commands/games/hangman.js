@@ -1,10 +1,12 @@
 const { Command } = require('discord.js-commando');
 const { MessageEmbed } = require('discord.js');
-const wordsObj = require("./hangmanData/hmwords.json");
+//const wordsObj = require("./hangmanData/hmwords.json");
 const config = require("D:\\Projects\\DiscordBots\\JohnBot\\johnbot\\data\\config.json");
 const categories = require("./hangmanData/categories.json");
-var state = 1;
+const leaderboard = require("./hangmanData/leaderboard.json");
+const fs = require('fs');
 
+var state = 1;
 const stateEnum = Object.freeze({
 	IDLE: 1,
 	SETUP: 2,
@@ -39,7 +41,7 @@ module.exports = class Hangman extends Command {
 		});
 	}
 
-	async run(msg, args) {
+	run(msg, args) {
 		args = args.toLowerCase();
 		switch (state) {
 			case stateEnum.IDLE:
@@ -54,27 +56,31 @@ module.exports = class Hangman extends Command {
 					}
 				}
 
-				//if no category was chosen, send the category list
-				if (state === stateEnum.IDLE) {
+				if (args === "leaderboard" || args === "leaderboards") {
+					showLeaderboard(msg);
+					break;
+				}
+
+				//if no category was chosen, or leaderboard command not sent, send the category list
+				if (state === stateEnum.IDLE && args != "leaderboard") {
 					showCategories(msg);
 					break;
 				}
 
 			case stateEnum.SETUP:
-				//Declare Variables
-				displayedWord = "";
-				currentPlayers = [];
-				playerIndex = 0;
-				goodGuesses = [];
-				badGuesses = [];
-				started = false;
 
 				this.client.user.setActivity("Hangman");
 
 				//automatically add msger to the game 
-				currentPlayers.push(msg.author);
+				let playerObj = {
+					username: msg.author.username,
+					id: msg.author.id,
+					points: 0
+				};
+				currentPlayers.push(playerObj);
 				setupMessage(msg);
 				state = stateEnum.WAIT;
+				break;
 
 			//Waits until game is started
 			case stateEnum.WAIT:
@@ -85,58 +91,79 @@ module.exports = class Hangman extends Command {
 					state = stateEnum.IDLE;
 					break;
 				}
-
+				//Display leaderboard
+				else if (args === "leaderboard") {
+					showLeaderboard(msg);
+					break;
+				}
 				//To join the game
-				if (args === "join") {
+				else if (args === "join") {
 					//Check if players is already in game
-					if (currentPlayers.includes(msg.author)) {
-						msg.reply("You have already joined");
-						setupMessage(msg);
-						break;
-					//add player to the game 
-					} else {
-						currentPlayers.push(msg.author);
+					let playerObj = {
+						username: msg.author.username,
+						id: msg.author.id,
+						points: 0
+					};
+					for (let i = 0; i < currentPlayers.length; i++) {
+						if (currentPlayers[i].id === msg.author.id) {
+							msg.reply("You have already joined");
+							setupMessage(msg);
+							return;
+						}
+
+						//add player to the game 
+						currentPlayers.push(playerObj);
 						msg.reply("Has been added to the game!!");
 						setupMessage(msg);
 						break;
 					}
-
+				}
 				//To start the game
-				} else if (args === "start") {
-
-					//Cant start the game if youre not in the game
-					if (!currentPlayers.includes(msg.author)) {
+				else if (args === "start") {
+					//game is started
+					for (let i = 0; i < currentPlayers.length; i++) {
+						if (currentPlayers[i].id === msg.author.id) {
+							state = stateEnum.GUESS;
+							i = currentPlayers.length;
+						}
+					}
+					//Cant start the game if you're not in the game
+					if (state === stateEnum.WAIT) {
 						msg.reply("You haven't joined! join to start playing");
 						setupMessage(msg);
 						break;
 					}
-
-					msg.say("Game starting now!")
-					currentPlayers = shuffle(currentPlayers);
-					setupHangman(msg);
-					drawHangman(msg);
-					state = stateEnum.GUESS;
 				} else {
 					break;
 				}
+
 			//Guessing state
 			case stateEnum.GUESS:
-
 				//To stop playing
 				if (args === "game_stop") {
 					msg.say("Game has been Stopped");
+					updateLeaderboard();
 					state = stateEnum.IDLE;
 					break;
 				}
 
 				//case needed during the start of the game so that "start" is not counted as an arg
-				if (!started) {
+				if (!started && args === "start") {
+					msg.say("Game starting now!");
+					currentPlayers = shuffle(currentPlayers);
+					setupHangman(msg);
+					drawHangman(msg);
 					started = true;
 					break;
 				}
 
+				if (args === "leaderboard") {
+					showLeaderboard(msg);
+					break;
+				}
+
 				//At this point, don't do anything if its not msger's turn
-				if (msg.author !== currentPlayers[playerIndex]) {
+				if (msg.author.id !== currentPlayers[playerIndex].id) {
 					break;
 				}
 
@@ -153,16 +180,19 @@ module.exports = class Hangman extends Command {
 					//Correct word guessed!
 					if (args === actualWord) {
 						displayedWord = actualWord;
-						state = stateEnum.IDLE
+						currentPlayers[playerIndex].points += 5;
+						msg.say(`You Win!!! ${msg.author} gained +5 points`);
+						drawHangman(msg);
+						updateLeaderboard();
+						break;
 					}
+
 					//Wrong word guessed :(
 					else {
 						badGuesses.push(args);
 						msg.reply("Wrong word guessed :(");
 					}
-				}
-
-				else { //player is guessing 1 letter
+				} else { //player is guessing 1 letter
 					let correctLetterIndex = [];
 					for (let i = 0; i < actualWord.length; i++) {
 						if (actualWord[i] === args.toLowerCase()) {
@@ -173,15 +203,17 @@ module.exports = class Hangman extends Command {
 
 					//Player guessed correct letter! :D 
 					if (correctLetterIndex.length > 0) {
-						msg.reply("Correct letter guessed!");
+						msg.reply(`Correct letter guessed! gained +${correctLetterIndex.length} points`);
+						//add points to msger
+						currentPlayers[playerIndex].points += correctLetterIndex.length;
 						//Put letter(s) into displayed word spot(s)
 						correctLetterIndex.forEach(i => {
 							displayedWord = displayedWord.substring(0, i) +
 								actualWord[i] +
 								displayedWord.substring(i + 1);
 						});
-
 					}
+
 					//Player guessed wrong letter D:
 					else {
 						badGuesses.push(args);
@@ -192,9 +224,9 @@ module.exports = class Hangman extends Command {
 				//win!
 				if (displayedWord === actualWord) {
 					msg.say(`You Win!!!`);
-					drawHangman(msg);
 					this.client.user.setActivity("Moo");
-					state = stateEnum.IDLE;
+					drawHangman(msg);
+					updateLeaderboard();
 					break;
 				}
 
@@ -204,7 +236,7 @@ module.exports = class Hangman extends Command {
 					displayedWord = actualWord;
 					drawHangman(msg);
 					this.client.user.setActivity("Moo");
-					state = stateEnum.IDLE;
+					updateLeaderboard();
 					break;
 				}
 
@@ -242,6 +274,11 @@ function setupHangman(msg) {
 
 //The message during the waiting period. 
 function setupMessage(msg) {
+	let tempPlayers = []; //array of player names
+	for (let i = 0; i < currentPlayers.length; i++) {
+		tempPlayers.push("<@" + currentPlayers[i].id + ">");
+	}
+
 	msg.say(new MessageEmbed()
 		.setColor(0x00AE86)
 		.setTitle(`Hangman Will Start Soon! The category is: ${topic}`)
@@ -252,7 +289,7 @@ function setupMessage(msg) {
 			},
 			{
 				name: "Players",
-				value: `${currentPlayers.join(', ')}`
+				value: `${tempPlayers.join(', ')}`
 			},
 			{
 				name: "How To Play",
@@ -265,7 +302,79 @@ function setupMessage(msg) {
 			{
 				name: "Quit",
 				value: `To stop playing: Type ${config.prefix}hm GAME_STOP`
+			},
+			{
+				name: "Check Leaderboard",
+				value: `Type ${config.prefix}hm leaderboard to check the leaderboard`
+			},
+			{
+				name: "Plug",
+				value: "Follow me on [Github](http://github.com/alcan2jc)"
 			}))
+}
+
+function showLeaderboard(msg) {
+	let players = [];
+	let points = [];
+	for (let i = 0; i < leaderboard.Players.length; i++) {
+		if (i < 10) {
+			players.push(leaderboard.Players[i].username);
+			points.push(leaderboard.Players[i].points);
+		}
+	}
+
+	msg.say(new MessageEmbed()
+		.setColor(0x00AE86)
+		.setTitle(`Hangman Leaderboard`)
+		.addFields(
+			{
+				name: "Top 10",
+				value: `${players.join('\n')}`,
+				inline: true
+			},
+			{
+				name: "Points",
+				value: `${points.join('\n')}`,
+				inline: true
+			}))
+}
+
+const updateLeaderboard = async () => {
+	const delay = ms => new Promise(res => setTimeout(res, ms));
+	await delay(3000);
+	let newLeaderboard = leaderboard;
+	let playerRegistered = false;
+	//check if playerid is already in the json
+	for (let i = 0; i < currentPlayers.length; i++) {
+		for (let j = 0; j < newLeaderboard.Players.length; j++) {
+			//add points to players already registered
+			if (currentPlayers[i].id === newLeaderboard.Players[j].id) {
+				newLeaderboard.Players[j].points += currentPlayers[i].points;
+				playerRegistered = true;
+			}
+		}
+
+		//Register new player to leaderboard
+		if (!playerRegistered) {
+			newLeaderboard.Players.push(currentPlayers[i]);
+		} else {
+			playerRegistered = false;
+		}
+	}
+
+	//Put leaderboard in descedning order by points
+	var byPoints = newLeaderboard.Players.slice(0);
+	byPoints.sort(function (a, b) {
+		return b.points - a.points;
+	});
+	newLeaderboard = { Players: byPoints }
+
+	//Write file to json
+	fs.writeFile("./commands/games/hangmanData/leaderboard.json", JSON.stringify(newLeaderboard), err => {
+		if (err) {
+			throw err;
+		}
+	})
 }
 
 //Helper function to randomize player order
@@ -303,10 +412,9 @@ function showCategories(msg) {
 
 //Draws the Hangman game
 function drawHangman(msg) {
-
 	//print whoever's turn if game hasnt ended
 	if (badGuesses.length < 6 && displayedWord != actualWord) {
-		msg.say(`It is your turn: ${currentPlayers[playerIndex]}`);
+		msg.say(`It is your turn: <@${currentPlayers[playerIndex].id}>`);
 	}
 
 	//Hangman drawing

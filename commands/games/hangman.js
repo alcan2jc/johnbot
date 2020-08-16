@@ -1,5 +1,6 @@
 const { Command } = require('discord.js-commando');
 const { MessageEmbed } = require('discord.js');
+const discord = require('discord.js');
 //const wordsObj = require("./hangmanData/hmwords.json");
 const config = require("D:\\Projects\\DiscordBots\\JohnBot\\johnbot\\data\\config.json");
 const categories = require("./hangmanData/categories.json");
@@ -14,6 +15,11 @@ const stateEnum = Object.freeze({
 	GUESS: 4,
 })
 
+//timer variables
+const startTime = '120000';
+const guessTime = '20000';
+var guessfilter = m => !m.author.bot && m.content.includes(`${config.prefix}hm `) && m.author.id == currentPlayers[playerIndex].id;
+
 //initialize variables
 var displayedWord = ""; //The displayed word 
 var actualWord = ""; //The actual word 
@@ -22,7 +28,8 @@ var playerIndex = 0; //Index of the player currently playing
 var goodGuesses = []; //List of correct letter guesses
 var badGuesses = []; //List of incorrect letter guesses
 var topic = "";
-var started = false;
+var gameOver = false;
+var timeRanOut = true;
 
 module.exports = class Hangman extends Command {
 	constructor(client) {
@@ -68,17 +75,38 @@ module.exports = class Hangman extends Command {
 				}
 
 			case stateEnum.SETUP:
-
 				this.client.user.setActivity("Hangman");
 
 				//automatically add msger to the game 
 				let playerObj = {
 					username: msg.author.username,
 					id: msg.author.id,
-					points: 0
+					points: 0,
 				};
+
 				currentPlayers.push(playerObj);
+				let startfilter = m => !m.author.bot && m.content === `${config.prefix}hm start`;
+				let startCollector = msg.channel.createMessageCollector(startfilter, { time: startTime });
+
+				startCollector.on('collect', (msg) => {
+					if (msg.content === `${config.prefix}hm start`) {
+						startCollector.stop();
+					}
+				});
+
 				setupMessage(msg);
+
+				//When time runs out
+				startCollector.on('end', (collected) => {
+					if (collected.size != 1) {
+						msg.say("Game starting now!");
+						currentPlayers = shuffle(currentPlayers);
+						setupHangman(msg);
+						drawHangman(msg);
+						started = true;
+						state = stateEnum.GUESS;
+					}
+				});
 				state = stateEnum.WAIT;
 				break;
 
@@ -87,14 +115,20 @@ module.exports = class Hangman extends Command {
 
 				//To stop playing
 				if (args === "game_stop") {
+					//Stop all ongoing timers
+					for (let i = 0; i < currentPlayers.length; i++) {
+						currentPlayers[i].guessed = false;
+					}
+					this.client.user.setActivity("Moo");
 					msg.say("Game has been Stopped");
 					state = stateEnum.IDLE;
-					break;
+					updateLeaderboard();
+					return;
 				}
 				//Display leaderboard
 				else if (args === "leaderboard") {
 					showLeaderboard(msg);
-					break;
+					return;
 				}
 				//To join the game
 				else if (args === "join") {
@@ -115,7 +149,7 @@ module.exports = class Hangman extends Command {
 						currentPlayers.push(playerObj);
 						msg.reply("Has been added to the game!!");
 						setupMessage(msg);
-						break;
+						return;
 					}
 				}
 				//To start the game
@@ -127,127 +161,125 @@ module.exports = class Hangman extends Command {
 							i = currentPlayers.length;
 						}
 					}
+
 					//Cant start the game if you're not in the game
 					if (state === stateEnum.WAIT) {
 						msg.reply("You haven't joined! join to start playing");
 						setupMessage(msg);
-						break;
+						return;
 					}
-				} else {
-					break;
-				}
 
-			//Guessing state
-			case stateEnum.GUESS:
-				//To stop playing
-				if (args === "game_stop") {
-					msg.say("Game has been Stopped");
-					updateLeaderboard();
-					state = stateEnum.IDLE;
-					break;
-				}
-
-				//case needed during the start of the game so that "start" is not counted as an arg
-				if (!started && args === "start") {
 					msg.say("Game starting now!");
 					currentPlayers = shuffle(currentPlayers);
 					setupHangman(msg);
 					drawHangman(msg);
-					started = true;
-					break;
-				}
+					playRound();
 
-				if (args === "leaderboard") {
-					showLeaderboard(msg);
-					break;
-				}
-
-				//At this point, don't do anything if its not msger's turn
-				if (msg.author.id !== currentPlayers[playerIndex].id) {
-					break;
-				}
-
-				displayedWord = displayedWord.toLowerCase();
-				//Check if letter/word has already been guessed. 
-				if (goodGuesses.includes(args) || badGuesses.includes(args)) {
-					msg.reply("You already tried that. Try again!");
-					drawHangman(msg);
-					break;
-				}
-
-				//player is guessing a word if guess has more than 1 letter
-				if (args.length > 1) {
-					//Correct word guessed!
-					if (args === actualWord) {
-						displayedWord = actualWord;
-						currentPlayers[playerIndex].points += 5;
-						msg.say(`You Win!!! ${msg.author} gained +5 points`);
-						drawHangman(msg);
-						updateLeaderboard();
-						break;
-					}
-
-					//Wrong word guessed :(
-					else {
-						badGuesses.push(args);
-						msg.reply("Wrong word guessed :(");
-					}
-				} else { //player is guessing 1 letter
-					let correctLetterIndex = [];
-					for (let i = 0; i < actualWord.length; i++) {
-						if (actualWord[i] === args.toLowerCase()) {
-							correctLetterIndex.push(i);
-							goodGuesses.push(args);
-						}
-					}
-
-					//Player guessed correct letter! :D 
-					if (correctLetterIndex.length > 0) {
-						msg.reply(`Correct letter guessed! gained +${correctLetterIndex.length} points`);
-						//add points to msger
-						currentPlayers[playerIndex].points += correctLetterIndex.length;
-						//Put letter(s) into displayed word spot(s)
-						correctLetterIndex.forEach(i => {
-							displayedWord = displayedWord.substring(0, i) +
-								actualWord[i] +
-								displayedWord.substring(i + 1);
-						});
-					}
-
-					//Player guessed wrong letter D:
-					else {
-						badGuesses.push(args);
-						msg.reply("Wrong letter guessed :(");
-					}
-				}
-
-				//win!
-				if (displayedWord === actualWord) {
-					msg.say(`You Win!!!`);
-					this.client.user.setActivity("Moo");
-					drawHangman(msg);
-					updateLeaderboard();
-					break;
-				}
-
-				//lose
-				if (badGuesses.length >= 6) {
-					msg.say(`You all suck\n The correct word/phrase was ${actualWord}`);
-					displayedWord = actualWord;
-					drawHangman(msg);
-					this.client.user.setActivity("Moo");
-					updateLeaderboard();
-					break;
-				}
-
-				//Next player's turn
-				if (playerIndex === currentPlayers.length - 1) {
-					playerIndex = 0;
 				} else {
-					playerIndex++;
+					return;
 				}
 
-				drawHangman(msg);
+			//Guessing state
+			case stateEnum.GUESS:
+
+				function playRound() {
+
+					displayedWord = displayedWord.toLowerCase();
+
+					//Start the timer for current player. 
+					const timer = msg.channel.createMessageCollector(guessfilter, { time: guessTime });
+					timer.on('collect', (guess) => {
+						guess = guess.content.substring(4, guess.length);
+						guess = guess.toLowerCase();
+						//To stop playing
+						if (guess === "game_stop") {
+							this.client.user.setActivity("Moo");
+							msg.say("Game has been Stopped");
+							state = stateEnum.IDLE;
+							updateLeaderboard();
+							return;
+						}
+
+						//To check leaderboard
+						if (guess === "leaderboard") {
+							showLeaderboard(msg);
+							return;
+						}
+
+						//Check if letter/word has already been guessed. 
+						if (goodGuesses.includes(guess) || badGuesses.includes(guess)) {
+							msg.say(`${msg.author}, You already tried that. Try again!`);
+							timeRanOut = false;
+							timer.stop();
+							return;
+						}
+
+						//player is guessing a word if guess has more than 1 letter
+						if (guess.length > 1) {
+							//Correct word guessed!
+							if (guess === actualWord) {
+								displayedWord = actualWord;
+								currentPlayers[playerIndex].points += 5;
+								msg.say(`You Win!!! ${msg.author} gained +5 points`);
+								drawHangman(msg);
+								updateLeaderboard();
+								return;
+							}
+
+							//Wrong word guessed :(
+							else {
+								badGuesses.push(guess);
+								msg.say(`${msg.author}, Wrong word guessed :(`);
+							}
+						} else { //player is guessing 1 letter
+							let correctLetterIndex = [];
+							for (let i = 0; i < actualWord.length; i++) {
+								if (actualWord[i] === guess.toLowerCase()) {
+									correctLetterIndex.push(i);
+									goodGuesses.push(guess);
+								}
+							}
+
+							//Player guessed correct letter! :D 
+							if (correctLetterIndex.length > 0) {
+								msg.say(`${msg.author}, Correct letter guessed! gained +${correctLetterIndex.length} points`);
+								//add points to msger
+								currentPlayers[playerIndex].points += correctLetterIndex.length;
+								//Put letter(s) into displayed word spot(s)
+								correctLetterIndex.forEach(i => {
+									displayedWord = displayedWord.substring(0, i) +
+										actualWord[i] +
+										displayedWord.substring(i + 1);
+								});
+							}
+
+							//Player guessed wrong letter D:
+							else {
+								badGuesses.push(guess);
+								msg.say(`${msg.author}, Wrong letter guessed :(`);
+							}
+							timeRanOut = false;
+							timer.stop();
+						}
+
+					});
+					//When player doesn't guess
+					timer.on('end', () => {
+						if (!gameOver) {
+							if (timeRanOut) {
+								badGuesses.push("");
+								msg.say(`<@${currentPlayers[playerIndex].id}> Took too long!`);
+							}
+
+							//Next player's turn
+							if (playerIndex === currentPlayers.length - 1) { playerIndex = 0; } else { playerIndex++; }
+
+							timeRanOut = true;
+							drawHangman(msg);
+							playRound();
+						}
+					});
+				}
 				break;
 
 			//Should never reach this point
@@ -311,6 +343,7 @@ function setupMessage(msg) {
 				name: "Plug",
 				value: "Follow me on [Github](http://github.com/alcan2jc)"
 			}))
+	msg.say("Game will start automatically in 2 minutes!");
 }
 
 function showLeaderboard(msg) {
@@ -341,7 +374,7 @@ function showLeaderboard(msg) {
 
 const updateLeaderboard = async () => {
 	const delay = ms => new Promise(res => setTimeout(res, ms));
-	await delay(3000);
+	await delay(5000);
 	let newLeaderboard = leaderboard;
 	let playerRegistered = false;
 	//check if playerid is already in the json
@@ -412,7 +445,7 @@ function showCategories(msg) {
 
 //Draws the Hangman game
 function drawHangman(msg) {
-	//print whoever's turn if game hasnt ended
+	//print whoever's turn if game hasn't ended
 	if (badGuesses.length < 6 && displayedWord != actualWord) {
 		msg.say(`It is your turn: <@${currentPlayers[playerIndex].id}>`);
 	}
@@ -455,8 +488,25 @@ function drawHangman(msg) {
 	}
 	drawing += "\n";
 
+	//win!
+	if (displayedWord === actualWord) {
+		state = stateEnum.STOP;
+		gameOver = true;
+		updateLeaderboard();
+	}
+
+	//lose
+	if (badGuesses.length >= 6) {
+
+		msg.say(`You all suck\n The correct word/phrase was ${actualWord}`);
+		displayedWord = actualWord;
+		state = stateEnum.STOP;
+		gameOver = true;
+		updateLeaderboard();
+	}
+
 	drawing += `\nWord: ${displayedWord.toUpperCase().split('').join(' ')}\        ` +
-		`\nIncorrect Guesses: ${badGuesses}` + ' \n';
+		`\nIncorrect Guesses: ${badGuesses.filter(word => word.length > 0)}` + ' \n';
 
 	drawing += '```';
 

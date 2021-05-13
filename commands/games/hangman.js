@@ -1,8 +1,8 @@
 const { Command } = require('discord.js-commando');
 const { MessageEmbed } = require('discord.js');
-const discord = require('discord.js');
+// const discord = require('discord.js');
 //const wordsObj = require("./hangmanData/hmwords.json");
-const config = require("D:\\Projects\\DiscordBots\\JohnBot\\johnbot\\data\\config.json");
+const config = require("../../data/config.json");
 const categories = require("./hangmanData/categories.json");
 const leaderboard = require("./hangmanData/leaderboard.json");
 const fs = require('fs');
@@ -103,7 +103,6 @@ module.exports = class Hangman extends Command {
 						currentPlayers = shuffle(currentPlayers);
 						setupHangman(msg);
 						drawHangman(msg);
-						started = true;
 						state = stateEnum.GUESS;
 					}
 				});
@@ -242,7 +241,7 @@ module.exports = class Hangman extends Command {
 
 							//Player guessed correct letter! :D 
 							if (correctLetterIndex.length > 0) {
-								msg.say(`${msg.author}, Correct letter guessed! gained +${correctLetterIndex.length} points`);
+								msg.say(`<@${currentPlayers[playerIndex].id}>, Correct letter guessed! gained +${correctLetterIndex.length} points`);
 								//add points to msger
 								currentPlayers[playerIndex].points += correctLetterIndex.length;
 								//Put letter(s) into displayed word spot(s)
@@ -256,7 +255,7 @@ module.exports = class Hangman extends Command {
 							//Player guessed wrong letter D:
 							else {
 								badGuesses.push(guess);
-								msg.say(`${msg.author}, Wrong letter guessed :(`);
+								msg.say(`<@${currentPlayers[playerIndex].id}>, Wrong letter guessed :(`);
 							}
 							timeRanOut = false;
 							timer.stop();
@@ -405,6 +404,7 @@ const updateLeaderboard = async () => {
 	//Write file to json
 	fs.writeFile("./commands/games/hangmanData/leaderboard.json", JSON.stringify(newLeaderboard), err => {
 		if (err) {
+			msg.say("bot fucked");
 			throw err;
 		}
 	})

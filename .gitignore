@@ -1,4 +1,5 @@
 
 data/config.json
-Discord-Hangman/
 index.js
+scraper/
+node_modules/

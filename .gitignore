@@ -1,4 +1,6 @@
-
+commands\games\hangmanData\leaderboard.json
 data/config.json
 Discord-Hangman/
 index.js
+node_modules/
+scraper/

@@ -6,7 +6,11 @@ const ytsr = require('ytsr');
 
 const queue = new Map();
 let songLength = 0;
-const cookie = '__Secure-3PSID=DAhlvMy5tNHj7_Sp4SekjmP5yCL47IspjYf5U1ZYw7W4e9-gGXnGBkD6fIm7BoZFtA0TlQ.;';
+const cookie = config.cookie;
+const { toLowerCase } = require('ffmpeg-static');
+
+const queue = new Map();
+let songLength = 0;
 
 module.exports = class Music extends Command {
 	constructor(client) {

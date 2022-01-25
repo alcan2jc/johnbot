@@ -1,6 +1,6 @@
 const { Command } = require('discord.js-commando');
 const { MessageEmbed } = require('discord.js');
-const process = require("../../config.json");
+// const process = require("../../config.json");
 const ytdl = require('ytdl-core');
 const ytsr = require('ytsr');
 

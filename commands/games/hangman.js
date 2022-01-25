@@ -2,6 +2,7 @@ const { Command } = require('discord.js-commando');
 const { MessageEmbed } = require('discord.js');
 const categories = require("./hangmanData/categories.json");
 const leaderboard = require("./hangmanData/leaderboard.json");
+const process = require("../../config.json");
 const fs = require('fs');
 
 var state = 1;

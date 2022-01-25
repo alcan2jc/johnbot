@@ -1,4 +1,5 @@
 const commando = require('discord.js-commando');
+const process = require("./config.json");
 
 //const client = new Discord.Client();
 const client = new commando.Client();

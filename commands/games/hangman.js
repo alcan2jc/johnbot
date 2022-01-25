@@ -1,6 +1,5 @@
 const { Command } = require('discord.js-commando');
 const { MessageEmbed } = require('discord.js');
-const config = require("D:\\Projects\\DiscordBots\\JohnBot\\johnbot\\data\\config.json");
 const categories = require("./hangmanData/categories.json");
 const leaderboard = require("./hangmanData/leaderboard.json");
 const fs = require('fs');
@@ -16,7 +15,7 @@ const stateEnum = Object.freeze({
 //timer variables
 const startTime = '120000';
 const guessTime = '20000';
-var guessfilter = m => !m.author.bot && m.content.includes(`${config.prefix}hm `) && m.author.id == currentPlayers[playerIndex].id;
+var guessfilter = m => !m.author.bot && m.content.includes(`${process.env.prefix}hm `) && m.author.id == currentPlayers[playerIndex].id;
 
 //initialize variables
 var displayedWord = ""; //The displayed word 
@@ -35,7 +34,7 @@ module.exports = class Hangman extends Command {
 			name: 'hm',
 			group: 'games',
 			memberName: 'hm',
-			description: `Starts a Hangman game. Type ${config.prefix}hm play to start playing`,
+			description: `Starts a Hangman game. Type ${process.env.prefix}hm play to start playing`,
 			guildOnly: true,
 			//1 second cooldown for commands
 			throttling: {
@@ -83,11 +82,11 @@ module.exports = class Hangman extends Command {
 				};
 
 				currentPlayers.push(playerObj);
-				let startfilter = m => !m.author.bot && m.content === `${config.prefix}hm start`;
+				let startfilter = m => !m.author.bot && m.content === `${process.env.prefix}hm start`;
 				let startCollector = msg.channel.createMessageCollector(startfilter, { time: startTime });
 
 				startCollector.on('collect', (msg) => {
-					if (msg.content === `${config.prefix}hm start`) {
+					if (msg.content === `${process.env.prefix}hm start`) {
 						startCollector.stop();
 					}
 				});
@@ -314,7 +313,7 @@ function setupMessage(msg) {
 		.addFields(
 			{
 				name: "Join",
-				value: `To join the game: Type ${config.prefix}hm join`
+				value: `To join the game: Type ${process.env.prefix}hm join`
 			},
 			{
 				name: "Players",
@@ -322,19 +321,19 @@ function setupMessage(msg) {
 			},
 			{
 				name: "How To Play",
-				value: `Guess letter(s), word(s), or number(s) by typing ${config.prefix}hm (guess)`
+				value: `Guess letter(s), word(s), or number(s) by typing ${process.env.prefix}hm (guess)`
 			},
 			{
 				name: "Start",
-				value: `To start the game: Type ${config.prefix}hm start`
+				value: `To start the game: Type ${process.env.prefix}hm start`
 			},
 			{
 				name: "Quit",
-				value: `To stop playing: Type ${config.prefix}hm GAME_STOP`
+				value: `To stop playing: Type ${process.env.prefix}hm GAME_STOP`
 			},
 			{
 				name: "Check Leaderboard",
-				value: `Type ${config.prefix}hm leaderboard to check the leaderboard`
+				value: `Type ${process.env.prefix}hm leaderboard to check the leaderboard`
 			},
 			{
 				name: "Plug",
@@ -434,7 +433,7 @@ function showCategories(msg) {
 	for (let i = 0; i < categories.Categories.length; i++) {
 		listCats += "• " + categories.Categories[i].name + "\n";
 	}
-	msg.say(`Type ${config.prefix}hm (category) to play`);
+	msg.say(`Type ${process.env.prefix}hm (category) to play`);
 	msg.say(new MessageEmbed()
 		.setColor(0x00AE86)
 		.setTitle("Categories")

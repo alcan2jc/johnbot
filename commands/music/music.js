@@ -1,13 +1,7 @@
 const { Command } = require('discord.js-commando');
 const { MessageEmbed } = require('discord.js');
-const config = require("../../data/config.json");
 const ytdl = require('ytdl-core');
 const ytsr = require('ytsr');
-
-const queue = new Map();
-let songLength = 0;
-const cookie = config.cookie;
-const { toLowerCase } = require('ffmpeg-static');
 
 const queue = new Map();
 let songLength = 0;
@@ -18,7 +12,7 @@ module.exports = class Music extends Command {
 			name: 'mus',
 			group: 'music',
 			memberName: 'mus',
-			description: `Type ${config.prefix}music "youtube link" to start playing a youtube video`,
+			description: `Type ${process.env.prefix}music "youtube link" to start playing a youtube video`,
 			guildOnly: true,
 			//1 second cooldown for commands
 			throttling: {

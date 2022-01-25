@@ -1,5 +1,5 @@
 commands/games/hangmanData/leaderboard.json
-data/config.json
+config.json
 index.js
 node_modules/
 scraper/

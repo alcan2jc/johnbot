@@ -1,16 +1,19 @@
 const commando = require('discord.js-commando');
-// const process = require("./config.json");
+const process = require("./config.json");
 
 //const client = new Discord.Client();
 const client = new commando.Client();
 
-client.commandPrefix = '$';
-client.unknownCommandResponse = false;
+client.registry.registerDefaultTypes();
+client.registry.registerDefaultGroups();
 client.registry.registerGroup("games", "Games");
 client.registry.registerGroup("music", "Music");
-client.registry.registerDefaults();
+// client.registry.registerDefaults();
 client.registry.registerCommandsIn(__dirname + "/commands");
-
+client.registry.registerDefaultCommands({
+	unknownCommand: false
+});
+client.commandPrefix = '$';
 
 client.on('ready', () => {
 	console.log('Bot is now connected');

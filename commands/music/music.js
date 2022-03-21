@@ -274,7 +274,7 @@ function play(guild, song, user) {
 		})
 		.on("finish", () => {
 			serverQueue.songs.shift();
-			user.setActivity("bruh");
+			// user.setActivity("bruh");
 			play(guild, serverQueue.songs[0], user);
 		})
 		.on("error", error => {
@@ -285,5 +285,5 @@ function play(guild, song, user) {
 		});
 	dispatcher.setVolumeLogarithmic(serverQueue.volume / 5);
 	serverQueue.textChannel.send(`Start playing: **${song.title}**`);
-	user.setActivity(`${song.title}`);
+	// user.setActivity(`${song.title}`);
 }

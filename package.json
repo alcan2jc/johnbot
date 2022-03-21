@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "engines":{
+  "engines": {
     "node": "12.x",
     "npm": "6.x"
   },
@@ -24,7 +24,7 @@
     "fluent-ffmpeg": "^2.1.2",
     "request": "^2.88.2",
     "tar": "^6.1.11",
-    "ytdl-core": "^4.9.1",
+    "ytdl-core": "^4.11.0",
     "ytsr": "^3.4.1"
   },
   "devDependencies": {

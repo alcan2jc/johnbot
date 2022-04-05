@@ -137,18 +137,7 @@ async function execute(message, serverQueue, url, user) {
 		let song;
 		let options = {
 			limit: 1,
-			// requestOptions: {
-			// 	headers: {
-			// 	  cookie: cookie,
-			// 	  //'x-youtube-identity-token': ""
-			// 	  'authorization': 'SAPISIDHASH 1634268761_e4c9501ba25a2a51f85244af2704c874d8215c89',
-			// 	  'X-Youtube-Identity-Token': 'QUFFLUhqbkQ1RHBLRzB0Tm9vYXJQMVZ3X0ZfOXRnRklsZ3w=',
-			// 	}
-			// },
 			filter: "audioonly",
-            // passes: 3,
-            // highWaterMark: 1 << 27
-
 		}
 		try {
 			if (ytdl.validateURL(url)) {

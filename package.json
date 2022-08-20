@@ -16,6 +16,7 @@
   "license": "ISC",
   "dependencies": {
     "@discordjs/opus": "github:discordjs/opus",
+    "axios": "^0.26.1",
     "cheerio": "^1.0.0-rc.3",
     "discord.js": "^12.5.3",
     "discord.js-commando": "github:discordjs/commando#bdbd84e2a978322f3af12c21e729eb7b7cd4a3dc",
@@ -24,7 +25,7 @@
     "fluent-ffmpeg": "^2.1.2",
     "request": "^2.88.2",
     "tar": "^6.1.11",
-    "ytdl-core": "^4.11.0",
+    "ytdl-core": "^4.10.0",
     "ytsr": "^3.4.1"
   },
   "devDependencies": {

@@ -1,11 +1,12 @@
 const { Command } = require('discord.js-commando');
 const { MessageEmbed } = require('discord.js');
-// const process = require("../../config.json");
+const process = require("../../config.json");
 const ytdl = require('ytdl-core');
 const ytsr = require('ytsr');
+const fs = require('fs');
 
 const queue = new Map();
-let songLength = 0;
+const serverSettings = {"guild": []};
 
 module.exports = class Music extends Command {
 	constructor(client) {
@@ -41,7 +42,7 @@ module.exports = class Music extends Command {
 		// command = command.toLowerCase();
 		const serverQueue = queue.get(msg.guild.id);
 		if (command.startsWith(`play`)) {
-			execute(msg, serverQueue, url, this.client.user);
+			execute(msg, serverQueue, url);
 			return;
 		}
 		else if (command.startsWith(`skip`)) {
@@ -54,7 +55,10 @@ module.exports = class Music extends Command {
 			readQueue(msg);
 		} else if (command.startsWith(`length`)) {
 			readLength(msg);
-		} else {
+		} else if (command.startsWith(`auto`)) {
+			toggleAuto(msg);
+		}
+		else {
 			msg.channel.send("You need to enter a valid command!");
 		}
 	}
@@ -66,7 +70,7 @@ function formatSecondsToTime(sec) {
 		num = parseInt(sec);
 		res += Math.floor((num / 60)).toString() + ":";
 		if ((num % 60) < 10) {
-				res += "0";
+			res += "0";
 		}
 		res += (num % 60).toString();
 	} else {
@@ -75,25 +79,32 @@ function formatSecondsToTime(sec) {
 	return res;
 }
 
-function readLength(msg) {
-	const serverQueue = queue.get(msg.guild.id);
-	
-	if (!serverQueue) {
-		msg.channel.send(`No songs playing`);
-		return;
-	}
-	
-	msg.channel.send(formatSecondsToTime(songLength) + " Remaining")
-	.then( (msg) => {
+function addGuildToSettings(msg) {
 
-		setTimeout(function editmsg () {
-			if (songLength >= 0) {
-				msg.edit(formatSecondsToTime(songLength) + " Remaining");
-				setTimeout(editmsg, 1000);
-				return;
-			}
-		}, 1000)
-	});
+	let newServerSettingsPush = {
+		"name": msg.guild.name,
+		"id": msg.guild.id,
+		"auto": true
+	}
+	serverSettings.guild.push(newServerSettingsPush);
+}
+
+function toggleAuto(msg) {
+	let guildObj = serverSettings.guild.find(o => o.id === msg.guild.id);
+	let autoplay = false;
+	
+	if (guildObj) {
+		//server in settings arr, replace auto value with opposite
+		let index = serverSettings.guild.indexOf(guildObj);
+		autoplay = !guildObj.auto;
+		serverSettings.guild[index].auto = autoplay;
+	} else {
+		autoplay = true;
+		addGuildToSettings(msg);
+	}
+
+	let str = autoplay ? "on" : "off";
+	msg.channel.send(`Autoplay is now ${str}`);
 }
 
 function readQueue(message) {
@@ -108,18 +119,50 @@ function readQueue(message) {
 			song.duration = formatSecondsToTime(song.duration);
 			songDuration += song.duration + "\n"
 		}
+
 		message.channel.send(new MessageEmbed()
-		.setColor(0x00AE86)
-		.setTitle("Song Queue")
-		.addFields(
-			{name: `Songs`,value: `${songList}`, inline: true}, 
-			{name: `Length`,value: `${songDuration}`, inline: true},
+			.setColor(0x00AE86)
+			.setTitle("Song Queue")
+			.addFields(
+				{ name: `Songs`, value: `${songList}`, inline: true },
+				{ name: `Length`, value: `${songDuration}`, inline: true },
 			)
 		)
 	}
 }
 
-async function execute(message, serverQueue, url, user) {
+async function getSongInfo(url, vidIndex) {
+	let songInfo;
+	let song;
+	let options = {
+		limit: 1,
+		filter: "audioonly",
+	}
+	if (ytdl.validateURL(url)) {
+		songInfo = await ytdl.getInfo(url, options);
+		// console.log("ytdl: ",songInfo.related_videos);
+		song = {
+			title: songInfo.videoDetails.title,
+			url: songInfo.videoDetails.video_url,
+			duration: songInfo.videoDetails.lengthSeconds,
+			nextSongId: songInfo.related_videos[vidIndex].id
+		};
+		// console.log(song);
+	} else {
+		songInfo = await ytsr(url, options);
+		songInfo = await ytdl.getInfo(songInfo.items[0].url, options);
+		// console.log("ytdl: ",songInfo.related_videos);
+		song = {
+			title: songInfo.videoDetails.title,
+			url: songInfo.videoDetails.video_url,
+			duration: songInfo.videoDetails.lengthSeconds,
+			nextSongId: songInfo.related_videos[vidIndex].id
+		};
+	}
+	return song;
+}
+
+async function execute(message, serverQueue, url) {
 	try {
 		const voiceChannel = message.member.voice.channel;
 		if (!voiceChannel)
@@ -133,39 +176,20 @@ async function execute(message, serverQueue, url, user) {
 			);
 		}
 
-		let songInfo;
-		let song;
-		let options = {
-			limit: 1,
-			filter: "audioonly",
-		}
 		try {
-			if (ytdl.validateURL(url)) {
-				// if (!url.includes("youtube")) {
-				// 	return message.say("Link must be from youtube");
-				// }
-				songInfo = await ytdl.getInfo(url, options);
-				song = {
-					title: songInfo.videoDetails.title,
-					url: songInfo.videoDetails.video_url,
-					duration: songInfo.videoDetails.lengthSeconds,
-				};
-			} else {
-				songInfo = await ytsr(url, options);
-				console.log(options);
-				song = {
-					title: songInfo.items[0].title,
-					url: songInfo.items[0].url,
-					duration: songInfo.items[0].duration
-				};
-				console.log(song);
-			}
+			song = await getSongInfo(url, 0);
 		} catch (err) {
 			if (serverQueue) {
 				serverQueue.connection.dispatcher.end();
 			}
 			console.log(err);
 			return message.say("No video id found");
+		}
+
+		let guildObj = serverSettings.guild.find(o => o.id === message.guild.id);
+		
+		if (!guildObj) {
+			addGuildToSettings(message);
 		}
 
 		if (!serverQueue) {
@@ -175,7 +199,6 @@ async function execute(message, serverQueue, url, user) {
 				connection: null,
 				songs: [],
 				volume: 5,
-				playing: true
 			};
 
 			queue.set(message.guild.id, queueConstruct);
@@ -183,7 +206,7 @@ async function execute(message, serverQueue, url, user) {
 
 			var connection = await voiceChannel.join();
 			queueConstruct.connection = connection;
-			play(message.guild, queueConstruct.songs[0], user);
+			play(message.guild, queueConstruct.songs[0], null);
 
 		} else {
 			serverQueue.songs.push(song);
@@ -219,16 +242,22 @@ function stop(message, serverQueue) {
 		return message.channel.send("There is no song that I could stop!");
 
 	serverQueue.songs = [];
-	serverQueue.connection.dispatcher.end();
+	serverQueue.voiceChannel.leave();
+	queue.delete(message.guild.id);
 }
 
-function play(guild, song, user) {
+async function play(guild, song, nextSongId) {
 	const serverQueue = queue.get(guild.id);
+	let rand = Math.floor(Math.random() * 5);
 	if (!song) {
-		serverQueue.voiceChannel.leave();
-		// user.setActivity("bruh");
-		queue.delete(guild.id);
-		return;
+		let guildObj = serverSettings.guild.find(o => o.id === guild.id);
+		if (!guildObj.auto) {
+			serverQueue.voiceChannel.leave();
+			queue.delete(guild.id);
+			return;
+		} else {
+			song = await getSongInfo("https://www.youtube.com/watch?v=" + nextSongId, rand);
+		}
 	}
 
 	const dispatcher = serverQueue.connection
@@ -241,38 +270,18 @@ function play(guild, song, user) {
 		}
 		))
 		.on("start", () => {
-			// function formatTimeToSec(time) {
-			// 	if (isNaN(time)) {
-			// 		time = time.split(':');
-			// 		min = parseInt(time[0]) * 60;
-			// 		sec = parseInt(time[1]);
-			// 		return min + sec;
-			// 	} else {
-			// 		return time;
-			// 	}
-			// }
-
-			// songLength = formatTimeToSec(song.duration);
-			// setInterval(counter, 1000);
-			// function counter () {
-			// 	songLength--;
-			// 	if (songLength <= 0) {
-			// 		clearInterval(counter);
-			// 	}
-			// }
+			
 		})
 		.on("finish", () => {
 			serverQueue.songs.shift();
-			// user.setActivity("bruh");
-			play(guild, serverQueue.songs[0], user);
+			play(guild, serverQueue.songs[0], song.nextSongId, rand);
 		})
 		.on("error", error => {
 			console.log(error);
 			serverQueue.textChannel.send(`Can't play: **${song.title}**`);
 			serverQueue.songs.shift();
-			play(guild, serverQueue.songs[0]);
+			play(guild, serverQueue.songs[0], song.nextSongId, rand);
 		});
 	dispatcher.setVolumeLogarithmic(serverQueue.volume / 5);
 	serverQueue.textChannel.send(`Start playing: **${song.title}**`);
-	// user.setActivity(`${song.title}`);
 }

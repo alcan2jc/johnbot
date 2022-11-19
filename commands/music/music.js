@@ -1,9 +1,8 @@
 const { Command } = require('discord.js-commando');
 const { MessageEmbed } = require('discord.js');
-// const process = require("../../config.json"); //comment when pushing to heroku.
+const process = require("../../config.json");
 const ytdl = require('ytdl-core');
 const ytsr = require('ytsr');
-const fs = require('fs');
 
 const queue = new Map();
 const serverSettings = {"guild": []};

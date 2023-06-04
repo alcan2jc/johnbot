@@ -94,7 +94,6 @@ async function execute(interaction, serverQueue) {
 					textChannel: interaction.channel,
 					voiceChannel: voiceChannel,
 					connection: null,
-					// songs: [{title: "", url: "", duration: ""}],
 					songs: [],
 					audioPlayer: createAudioPlayer(),
 					volume: 5,
@@ -185,6 +184,7 @@ async function play(interaction, newServerQueue) {
 		if (!song || !stream) {
 			if (serverQueue) {
 				serverQueue.songs = [];
+				disposeAudioPlayer(interaction.guildId);
 				serverQueue.connection.destroy();
 			}
 			queue.delete(interaction.guildId);

@@ -1,10 +1,9 @@
 const { LogLevel, SapphireClient } = require('@sapphire/framework');
 const { GatewayIntentBits } = require('discord.js');
-const { createAudioPlayer } = require("@discordjs/voice");
 const process  = require('../config.json');
+const { Player } = require('discord-player');
 
-const queue = new Map();
-const player = createAudioPlayer({ debug: true });
+// const queue = new Map();
 
 // const rest = new REST().setToken(process.env.token);
 // rest.put(Routes.applicationCommands(process.env.clientID, '1099589112547246151'), { body: [] })
@@ -45,4 +44,12 @@ client.on('ready', () => {
 
 client.login(process.env.token);
 
-module.exports = {client, queue, player, getMethods};
+const player = Player.singleton(client);
+
+async function loadExtractors() {
+	await player.extractors.loadDefault();
+}
+
+loadExtractors();
+
+module.exports = {client, getMethods};

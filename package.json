@@ -35,8 +35,6 @@
     "opusscript": "^0.0.8",
     "play-dl": "^1.9.6",
     "request": "2.88.2",
-    "sodium": "^3.0.2",
-    "sodium-native": "^4.0.1",
     "tar": "6.1.13",
     "ytdl-core": "4.11.4",
     "ytsr": "3.8.2"

@@ -1,24 +1,14 @@
 const { LogLevel, SapphireClient } = require('@sapphire/framework');
-const { GatewayIntentBits } = require('discord.js');
+const { GatewayIntentBits, REST, Routes } = require('discord.js');
 const process  = require('../config.json');
 const { Player } = require('discord-player');
+const { showLyricsOnButtonClick } = require('../src/util/MusicUtil');
 
-// const queue = new Map();
-
-// const rest = new REST().setToken(process.env.token);
-// rest.put(Routes.applicationCommands(process.env.clientID, '1099589112547246151'), { body: [] })
-// 	.then(() => console.log('Successfully deleted all application commands.'))
-// 	.catch(console.error);
 const client = new SapphireClient ({
 	// logger: {
 	// 	level: LogLevel.Debug
 	// },
 	intents: [
-		// GatewayIntentBits.DirectMessageReactions,
-		// GatewayIntentBits.DirectMessages,
-		// GatewayIntentBits.GuildEmojisAndStickers,
-		// GatewayIntentBits.GuildMembers,
-		// GatewayIntentBits.GuildMessageReactions,
 		GatewayIntentBits.GuildMessages,
 		GatewayIntentBits.Guilds,
 		GatewayIntentBits.GuildVoiceStates,
@@ -26,15 +16,6 @@ const client = new SapphireClient ({
 	],
 	loadMessageCommandListeners: true, 
 });
-
-const getMethods = (obj) => {
-	let properties = new Set()
-	let currentObj = obj
-	do {
-		Object.getOwnPropertyNames(currentObj).map(item => properties.add(item))
-	} while ((currentObj = Object.getPrototypeOf(currentObj)))
-	return [...properties.keys()].filter(item => typeof obj[item] === 'function')
-}
 
 client.on('ready', () => {
 	console.log('Bot is now connected');
@@ -44,7 +25,25 @@ client.on('ready', () => {
 
 client.login(process.env.token);
 
-const player = Player.singleton(client);
+const player = Player.singleton(client, {
+	ytdlOptions: {
+		requestOptions: {
+			headers: {
+				cookie: process.env.COOKIES
+			}
+		}
+	}
+});
+
+player.events.on('playerStart', (queue, track) => {
+	// Emitted when the player starts to play a song
+	return showLyricsOnButtonClick(queue, track, `Playing: **${track.title}**\n${track.url}`);
+});
+ 
+player.events.on('audioTrackAdd', (queue, track) => {
+	// Emitted when the player adds a single song to its queue
+	return showLyricsOnButtonClick(queue, track, `**${track.title}** has been added to the queue!\n${track.url}`);
+});
 
 async function loadExtractors() {
 	await player.extractors.loadDefault();
@@ -52,4 +51,31 @@ async function loadExtractors() {
 
 loadExtractors();
 
-module.exports = {client, getMethods};
+function deleteAllCommands() {
+	for (let guildId in process.env.guildIDs) {
+		rest.delete(Routes.applicationGuildCommand(process.env.clientID, guildId, { body: [] }))
+			.then(() => console.log('Successfully deleted guild command'))
+			.catch(console.error);
+	}
+
+	// for global commands
+	rest.put(Routes.applicationCommands(clientId), { body: [] })
+	.then(() => console.log('Successfully deleted all application commands.'))
+	.catch(console.error);
+}
+
+function deleteCommand(commandId) {
+	const rest = new REST().setToken(process.env.token);
+
+	for (let guildId in process.env.guildIDs) {
+		rest.delete(Routes.applicationGuildCommand(process.env.clientID, guildId, commandId))
+			.then(() => console.log('Successfully deleted guild command'))
+			.catch(console.error);
+	}
+	// for global commands
+	rest.delete(Routes.applicationCommand(process.env.clientID, commandId))
+		.then(() => console.log('Successfully deleted application command'))
+		.catch(console.error);
+}
+
+module.exports = { client };

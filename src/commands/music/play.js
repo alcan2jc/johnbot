@@ -1,14 +1,10 @@
 const { RegisterBehavior } = require('@sapphire/framework');
 const { Subcommand } = require('@sapphire/plugin-subcommands');
 const { PermissionsBitField } = require('discord.js'); 
-const { createAudioPlayer, AudioPlayerStatus, createAudioResource, joinVoiceChannel, getVoiceConnection, entersState, VoiceConnectionStatus } =  require("@discordjs/voice");
 const process = require("../../../config.json");
 const { Time } = require('@sapphire/time-utilities');
-const { stream, video_basic_info, yt_validate, search, stream_from_info } = require('play-dl');
-const { client, getMethods} = require('../../index.js');
-const { disposeAudioPlayer, log } = require('../../util.js');
+const { client } = require('../../index.js');
 const { useMasterPlayer } = require('discord-player');
-const fs = require('fs/promises');
 
 const player = useMasterPlayer();
 
@@ -50,14 +46,14 @@ module.exports = class Play extends Subcommand {
 				.setDescription('play')
 				.addSubcommand((command) =>
           			command
-            			.setName('search')
-						.setDescription('search song')
+            			.setName('query')
+						.setDescription('song query')
 						.addStringOption((option) =>
-              				option.setName('search').setDescription('Youtube search query').setRequired(true)
+              				option.setName('query').setDescription('Youtube search query').setRequired(true)
             			)
 				),
 				{ 
-					idHints: ['1099589111704207420'],
+					idHints: [process.env.playIdHint],
 					behaviorWhenNotIdentical: RegisterBehavior.LogToConsole,
 					guildIds: process.env.guildIDs
 				}
@@ -65,8 +61,6 @@ module.exports = class Play extends Subcommand {
 	}
 
 	async chatInputRun(interaction) {
-		await interaction.deferReply();
-		// const serverQueue = queue.get(interaction.guildId);
 		execute(interaction);
 		return;
 	}
@@ -75,27 +69,27 @@ module.exports = class Play extends Subcommand {
 async function execute(interaction) {
 
 	try {
+		let voiceChannel = interaction.member.voice.channel;
 
-		let voiceChannel = client.channels.cache.find(x => x.name === 'test').voiceStates;
-		console.log("voiceChannel", voiceChannel);
+		// voiceChannel = client.channels.cache.find(x => (x.type === 2 && x.guild.name === 'test_server')); //For Debugging
+
+		if (!voiceChannel)
+			return interaction.reply(
+				"You need to be in a voice channel to play music!"
+			);
+
+		const botPermissions = voiceChannel.permissionsFor(interaction.client.user);
+		if (!botPermissions.has(PermissionsBitField.Flags.Connect) || !PermissionsBitField.Flags.Speak) {
+				return interaction.reply(
+				"I need the permissions to join and speak in your voice channel!"
+			);
+		}
 		
-		// voiceChannel = interaction.member.voice.channel;
-		// if (!voiceChannel)
-		// 	return interaction.reply(
-		// 		"You need to be in a voice channel to play music!"
-		// 	);
-
-		// const botPermissions = voiceChannel.permissionsFor(interaction.client.user);
-		// if (!botPermissions.has(PermissionsBitField.Flags.Connect) || !PermissionsBitField.Flags.Speak) {
-		// 		return interaction.editReply(
-		// 		"I need the permissions to join and speak in your voice channel!"
-		// 	);
-		// }
-
 		try {
-			const query = interaction.options._hoistedOptions[0].value;
+			interaction.deferReply("Finding song");
+			const query = interaction.options.getString("query");
 
-			const { track } = await player.play(voiceChannel, query, {
+			await player.play(voiceChannel, query, {
 				nodeOptions: {
 					// nodeOptions are the options for guild node (aka your queue in simple word)
 					metadata: interaction, // we can access this metadata object using queue.metadata later on
@@ -103,24 +97,13 @@ async function execute(interaction) {
 				},
 			});
 
-			player.events.on('playerStart', (queue, track) => {
-				// Emitted when the player starts to play a song
-				queue.metadata.send(`Playing: **${track.title}**\n${track.url}`);
-			});
-			 
-			player.events.on('audioTrackAdd', (queue, track) => {
-				// Emitted when the player adds a single song to its queue
-				queue.metadata.send(`**${track.title}** has been added to the queue!\n${track.url}`);
-			});
-			return;
-
 		} catch (err) {
 			console.log("err:",err);
-			return interaction.followUp("Error finding song");
+			return interaction.editReply("Error finding song");
 		}
 
 	} catch(err) {
-		interaction.followUp("bot broke");
+		interaction.editReply("bot broke");
 		console.log(err);
 	}
 }

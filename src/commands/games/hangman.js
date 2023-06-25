@@ -402,7 +402,7 @@ const updateLeaderboard = async () => {
 	//Write file to json
 	fs.writeFile("./commands/games/hangmanData/leaderboard.json", JSON.stringify(newLeaderboard), err => {
 		if (err) {
-			msg.say("bot fucked");
+			msg.say("bot broke");
 			throw err;
 		}
 	})

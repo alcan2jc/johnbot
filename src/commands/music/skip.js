@@ -23,12 +23,12 @@ module.exports = class Skip extends Subcommand {
 
     async chatInputRun(interaction) {
 		try {
-			await interaction.deferReply({ content: `**Skipping Song**`, ephemeral: true, fetchReply: true });
+			await interaction.deferReply({ content: `**Skipping Song**` });
 			const queue = useQueue(interaction.guildId);
 			if (!interaction.member.voice.channel)
-				return interaction.followUp("You have to be in a voice channel to stop the music!");
+				return interaction.editReply("You have to be in a voice channel to stop the music!");
 			if (!queue)
-				return interaction.followUp("There is no song that I could skip!");
+				return interaction.editReply("There is no song that I could skip!");
 
 			queue.node.skip();
 			return interaction.editReply(`Skipped: **${queue.currentTrack.title}**`);

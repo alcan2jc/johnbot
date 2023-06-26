@@ -58,7 +58,7 @@ module.exports = class Play extends Subcommand {
 					guildIds: process.env.guildIDs
 				}
 		);
-	}
+}
 
 	async chatInputRun(interaction) {
 		execute(interaction);
@@ -67,6 +67,7 @@ module.exports = class Play extends Subcommand {
 };
 
 async function execute(interaction) {
+	await interaction.deferReply({ content: `**Finding song...**` });
 
 	try {
 		let voiceChannel = interaction.member.voice.channel;
@@ -74,19 +75,18 @@ async function execute(interaction) {
 		// voiceChannel = client.channels.cache.find(x => (x.type === 2 && x.guild.name === 'test_server')); //For Debugging
 
 		if (!voiceChannel)
-			return interaction.reply(
+			return interaction.editReply(
 				"You need to be in a voice channel to play music!"
 			);
 
 		const botPermissions = voiceChannel.permissionsFor(interaction.client.user);
 		if (!botPermissions.has(PermissionsBitField.Flags.Connect) || !PermissionsBitField.Flags.Speak) {
-				return interaction.reply(
+				return interaction.editReply(
 				"I need the permissions to join and speak in your voice channel!"
 			);
 		}
 		
 		try {
-			interaction.deferReply("Finding song");
 			const query = interaction.options.getString("query");
 
 			await player.play(voiceChannel, query, {

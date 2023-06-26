@@ -26,7 +26,7 @@ module.exports = class Volume extends Subcommand {
 
     async chatInputRun(interaction) {
 		try {
-			await interaction.deferReply({ content: `**Changing Volume**`, ephemeral: true, fetchReply: true });
+			await interaction.deferReply({ content: `**Changing Volume**`, fetchReply: true });
 			const queue = useQueue(interaction.guildId);
 			if (!interaction.member.voice.channel)
 				return interaction.followUp("You have to be in a voice channel to change the volume!");

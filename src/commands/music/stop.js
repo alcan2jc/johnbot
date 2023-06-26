@@ -24,7 +24,7 @@ module.exports = class Stop extends Subcommand {
 	async chatInputRun(interaction) {
 		try {
 		
-			await interaction.deferReply({ content: `Stopping bot`, ephemeral: true, fetchReply: true });
+			await interaction.deferReply({ content: `Stopping bot`, fetchReply: true });
 
 			if (!interaction.member.voice.channel) 
 			return interaction.editReply(

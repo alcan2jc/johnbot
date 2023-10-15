@@ -1,0 +1,18 @@
+{
+    "Categories": [
+        {
+            "genre": "Pop",
+            "songs": [
+                "Blank Space|Taylor Swift",
+                "Bitch I'm a Cow|Doja Cat"
+            ]
+        },
+
+        {
+            "genre": "Hip Hop",
+            "songs": [
+                "Lucid Dreams|Juice Wrld"
+            ]
+        }
+    ]
+}

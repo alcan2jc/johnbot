@@ -1,4 +1,4 @@
-const { Command } = require('discord.js-commando');
+const { Command } = require('@sapphire/framework');
 
 module.exports = class UnknownCommandCommand extends Command {
     constructor(client) {

@@ -1,8 +1,8 @@
-const { Command } = require('discord.js-commando');
+const { Command } = require('@sapphire/framework');
 const { MessageEmbed } = require('discord.js');
 const categories = require("./hangmanData/categories.json");
 const leaderboard = require("./hangmanData/leaderboard.json");
-// const process = require("../../config.json");
+const process = require("../../../config.json");
 const fs = require('fs');
 
 var state = 1;
@@ -402,7 +402,7 @@ const updateLeaderboard = async () => {
 	//Write file to json
 	fs.writeFile("./commands/games/hangmanData/leaderboard.json", JSON.stringify(newLeaderboard), err => {
 		if (err) {
-			msg.say("bot fucked");
+			msg.say("bot broke");
 			throw err;
 		}
 	})

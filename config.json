@@ -1,0 +1,6 @@
+{
+	"env": {
+		"token" : "ENTER TOKEN HERE", 
+		"clientID": "ENTER CLIENT ID HERE"
+	}
+}

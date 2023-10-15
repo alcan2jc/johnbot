@@ -1,40 +1,44 @@
 const { RegisterBehavior } = require('@sapphire/framework');
 const { Subcommand } = require('@sapphire/plugin-subcommands');
-const { PermissionsBitField } = require('discord.js'); 
+const { PermissionsBitField } = require('discord.js');
 const process = require("../../../config.json");
 const { Time } = require('@sapphire/time-utilities');
 const { client } = require('../../index.js');
-const { useMasterPlayer } = require('discord-player');
+const { Logger } = require('../../util/Logger');
+const { useMainPlayer } = require('discord-player');
 
-const player = useMasterPlayer();
+// const logger = new Logger("log.txt");
+
+const player = useMainPlayer();
 
 module.exports = class Play extends Subcommand {
-	
 	constructor(context, options) {
+
 		super(context, {
 			...options,
 			name: 'play',
 			description: 'play',
 			category: 'Music',
-			chatInputCommand: { 
-				guildIds: process.env.guildIDs 
+			chatInputCommand: {
+				guildIds: process.env.guildIDs
 			},
 			cooldownDelay: Time.Second * 2,
+
 			subcommand: [
 				{
 					name: 'search',
 					chatInputRun: "searchWords",
 					default: true,
 					setRequired: true
-        		}
+				}
 				// {
 				// 	name: 'url',
 				// 	chatInputRun: 'searchUrl',
-        		// },
+				// },
 				// {
 				// 	name: 'debug',
 				// 	chatInputRun: 'searchPlayList',
-        		// }
+				// }
 			]
 		});
 	}
@@ -45,20 +49,20 @@ module.exports = class Play extends Subcommand {
 				.setName('play')
 				.setDescription('play')
 				.addSubcommand((command) =>
-          			command
-            			.setName('query')
+					command
+						.setName('query')
 						.setDescription('song query')
 						.addStringOption((option) =>
-              				option.setName('query').setDescription('Youtube search query').setRequired(true)
-            			)
+							option.setName('query').setDescription('Youtube search query').setRequired(true)
+						)
 				),
-				{ 
-					idHints: [process.env.playIdHint],
-					behaviorWhenNotIdentical: RegisterBehavior.LogToConsole,
-					guildIds: process.env.guildIDs
-				}
+			{
+				idHints: [process.env.playIdHint],
+				behaviorWhenNotIdentical: RegisterBehavior.LogToConsole,
+				guildIds: process.env.guildIDs
+			}
 		);
-}
+	}
 
 	async chatInputRun(interaction) {
 		execute(interaction);
@@ -81,29 +85,33 @@ async function execute(interaction) {
 
 		const botPermissions = voiceChannel.permissionsFor(interaction.client.user);
 		if (!botPermissions.has(PermissionsBitField.Flags.Connect) || !PermissionsBitField.Flags.Speak) {
-				return interaction.editReply(
+			return interaction.editReply(
 				"I need the permissions to join and speak in your voice channel!"
 			);
 		}
-		
+
 		try {
 			const query = interaction.options.getString("query");
-
+			console.log(voiceChannel);
 			await player.play(voiceChannel, query, {
 				nodeOptions: {
 					// nodeOptions are the options for guild node (aka your queue in simple word)
 					metadata: interaction, // we can access this metadata object using queue.metadata later on
 					leaveOnEmpty: false,
+
 				},
 			});
 
 		} catch (err) {
-			console.log("err:",err);
+			// console.log("err:",err);
+			// logger.logErr(err);
+			console.log("execute, query:", err);
 			return interaction.editReply("Error finding song");
 		}
 
-	} catch(err) {
+	} catch (err) {
 		interaction.editReply("bot broke");
-		console.log(err);
+		console.log("execute, voiceChannel:", err);
+		// logger.logErr(err);
 	}
 }

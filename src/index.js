@@ -35,7 +35,7 @@ client.once('ready', () => {
 	const player = useMainPlayer();
 
 	// generate dependencies report
-	// console.log(player.scanDeps());
+	console.log(player.scanDeps());
 	// ^------ This is similar to @discordjs/voice's `generateDependenciesReport()` function, but with additional informations related to discord-player
 
 	// log metadata query, search execution, etc.

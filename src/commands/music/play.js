@@ -110,7 +110,7 @@ async function execute(interaction) {
 
 		try {
 			const query = interaction.options.getString("query");
-			console.log(voiceChannel);
+			
 			await player.play(voiceChannel, query, {
 				nodeOptions: {
 					// nodeOptions are the options for guild node (aka your queue in simple word)

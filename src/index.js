@@ -1,10 +1,11 @@
 const { LogLevel, SapphireClient } = require('@sapphire/framework');
 const { GatewayIntentBits, REST, Routes } = require('discord.js');
-const process  = require('../config.json');
+const process = require('../config.json');
 const { Player } = require('discord-player');
 const { showLyricsOnButtonClick } = require('../src/util/MusicUtil');
+const { useMainPlayer } = require('discord-player');
 
-const client = new SapphireClient ({
+const client = new SapphireClient({
 	// logger: {
 	// 	level: LogLevel.Debug
 	// },
@@ -14,13 +15,27 @@ const client = new SapphireClient ({
 		GatewayIntentBits.GuildVoiceStates,
 		GatewayIntentBits.MessageContent
 	],
-	loadMessageCommandListeners: true, 
+	loadMessageCommandListeners: true,
 });
 
-client.on('ready', () => {
+client.once('ready', () => {
 	console.log('Bot is now connected');
 	client.user.setActivity("bruh");
 	client.channels.cache.find(x => x.name === 'test').send('ready');
+
+	const player = useMainPlayer();
+
+	// generate dependencies report
+	console.log(player.scanDeps());
+	// ^------ This is similar to @discordjs/voice's `generateDependenciesReport()` function, but with additional informations related to discord-player
+
+	// log metadata query, search execution, etc.
+	player.on('debug', console.log);
+	// ^------ This shows how your search query is interpreted, if the query was cached, which extractor resolved the query or which extractor failed to resolve, etc.
+
+	// log debug logs of the queue, such as voice connection logs, player execution, streaming process etc.
+	player.events.on('debug', (queue, message) => console.log(`[DEBUG ${queue.guild.id}] ${message}`));
+	// ^------ This shows how queue handles the track. It logs informations like the status of audio player, streaming process, configurations used, if streaming failed or not, etc.
 });
 
 client.login(process.env.token);
@@ -39,7 +54,7 @@ player.events.on('playerStart', (queue, track) => {
 	// Emitted when the player starts to play a song
 	return showLyricsOnButtonClick(queue, track, `Playing: **${track.title}**\n${track.url}`);
 });
- 
+
 player.events.on('audioTrackAdd', (queue, track) => {
 	// Emitted when the player adds a single song to its queue
 	return showLyricsOnButtonClick(queue, track, `**${track.title}** has been added to the queue!\n${track.url}`);
@@ -60,8 +75,8 @@ function deleteAllCommands() {
 
 	// for global commands
 	rest.put(Routes.applicationCommands(clientId), { body: [] })
-	.then(() => console.log('Successfully deleted all application commands.'))
-	.catch(console.error);
+		.then(() => console.log('Successfully deleted all application commands.'))
+		.catch(console.error);
 }
 
 function deleteCommand(commandId) {
@@ -78,4 +93,4 @@ function deleteCommand(commandId) {
 		.catch(console.error);
 }
 
-module.exports = { client };
+module.exports = { client, player };

@@ -33,7 +33,6 @@
     "discord.js": "^14.13.0",
     "libsodium-wrappers": "^0.7.13",
     "play-dl": "^1.9.7",
-    "request": "2.88.2",
     "spotify-web-api-js": "^1.5.2",
     "tar": "6.2.0",
     "winston": "^3.11.0",

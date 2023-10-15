@@ -1,9 +1,7 @@
 const { LogLevel, SapphireClient } = require('@sapphire/framework');
 const { GatewayIntentBits, REST, Routes } = require('discord.js');
 const process = require('../config.json');
-const { Player } = require('discord-player');
-const { showLyricsOnButtonClick } = require('../src/util/MusicUtil');
-const { useMainPlayer } = require('discord-player');
+const { useMainPlayer, Player } = require('discord-player');
 
 const client = new SapphireClient({
 	// logger: {
@@ -16,6 +14,17 @@ const client = new SapphireClient({
 		GatewayIntentBits.MessageContent
 	],
 	loadMessageCommandListeners: true,
+});
+
+/** Declare Player */
+const player = Player.singleton(client, {
+	ytdlOptions: {
+		requestOptions: {
+			headers: {
+				cookie: process.env.COOKIES
+			}
+		}
+	}
 });
 
 client.once('ready', () => {
@@ -39,32 +48,6 @@ client.once('ready', () => {
 });
 
 client.login(process.env.token);
-
-const player = Player.singleton(client, {
-	ytdlOptions: {
-		requestOptions: {
-			headers: {
-				cookie: process.env.COOKIES
-			}
-		}
-	}
-});
-
-player.events.on('playerStart', (queue, track) => {
-	// Emitted when the player starts to play a song
-	return showLyricsOnButtonClick(queue, track, `Playing: **${track.title}**\n${track.url}`);
-});
-
-player.events.on('audioTrackAdd', (queue, track) => {
-	// Emitted when the player adds a single song to its queue
-	return showLyricsOnButtonClick(queue, track, `**${track.title}** has been added to the queue!\n${track.url}`);
-});
-
-async function loadExtractors() {
-	await player.extractors.loadDefault();
-}
-
-loadExtractors();
 
 function deleteAllCommands() {
 	for (let guildId in process.env.guildIDs) {
@@ -93,4 +76,4 @@ function deleteCommand(commandId) {
 		.catch(console.error);
 }
 
-module.exports = { client, player };
+module.exports = { client };

@@ -3,13 +3,31 @@ const { Subcommand } = require('@sapphire/plugin-subcommands');
 const { PermissionsBitField } = require('discord.js');
 const process = require("../../../config.json");
 const { Time } = require('@sapphire/time-utilities');
-const { client } = require('../../index.js');
 const { Logger } = require('../../util/Logger');
 const { useMainPlayer } = require('discord-player');
+const { showLyricsOnButtonClick } = require('../../util/MusicUtil');
 
 // const logger = new Logger("log.txt");
 
 const player = useMainPlayer();
+
+/** Player Events */
+player.events.on('playerStart', (queue, track) => {
+	// Emitted when the player starts to play a song
+	return showLyricsOnButtonClick(queue, track, `Playing: **${track.title}**\n${track.url}`);
+});
+
+player.events.on('audioTrackAdd', (queue, track) => {
+	// Emitted when the player adds a single song to its queue
+	return showLyricsOnButtonClick(queue, track, `**${track.title}** has been added to the queue!\n${track.url}`);
+});
+
+/** Player extractors */
+async function loadExtractors() {
+	await player.extractors.loadDefault();
+}
+
+loadExtractors();
 
 module.exports = class Play extends Subcommand {
 	constructor(context, options) {
@@ -92,7 +110,7 @@ async function execute(interaction) {
 
 		try {
 			const query = interaction.options.getString("query");
-			console.log(voiceChannel);
+			
 			await player.play(voiceChannel, query, {
 				nodeOptions: {
 					// nodeOptions are the options for guild node (aka your queue in simple word)
